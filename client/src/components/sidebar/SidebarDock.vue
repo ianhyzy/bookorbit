@@ -137,7 +137,7 @@ function handleLogout() {
       <div class="ms-auto flex items-center gap-(--dock-gap) group-data-[collapsible=icon]:contents">
         <NotificationSheet v-if="canAccessNotifications" :icon-radius-class="iconRadiusClass" />
 
-        <Tooltip>
+        <Tooltip v-if="false">
           <DropdownMenu>
             <TooltipTrigger as-child>
               <DropdownMenuTrigger as-child>
@@ -179,8 +179,8 @@ function handleLogout() {
           <TooltipContent :side="tooltipSide">{{ t('components.appHeader.help') }}</TooltipContent>
         </Tooltip>
 
-        <SidebarAppearanceMenu :control-class="controlClass" :is-mobile="isMobile" :is-rail="isRail" :anchor="dockRef" />
-        <SidebarLanguageMenu :control-class="controlClass" :is-mobile="isMobile" :is-rail="isRail" :anchor="dockRef" />
+        <SidebarAppearanceMenu v-if="false" :control-class="controlClass" :is-mobile="isMobile" :is-rail="isRail" :anchor="dockRef" />
+        <SidebarLanguageMenu v-if="false" :control-class="controlClass" :is-mobile="isMobile" :is-rail="isRail" :anchor="dockRef" />
 
         <Tooltip>
           <TooltipTrigger as-child>
