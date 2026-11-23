@@ -3,6 +3,7 @@ import { boolean, index, integer, pgTable, real, serial, text, timestamp, unique
 
 import { books } from './books';
 import { users } from './auth';
+import { annotations } from './reader';
 
 export const hardcoverUserSettings = pgTable('hardcover_user_settings', {
   id: serial('id').primaryKey(),
@@ -16,6 +17,7 @@ export const hardcoverUserSettings = pgTable('hardcover_user_settings', {
   autoSyncOnStatusChange: boolean('auto_sync_on_status_change').notNull().default(true),
   autoSyncOnProgressUpdate: boolean('auto_sync_on_progress_update').notNull().default(true),
   autoSyncOnRatingChange: boolean('auto_sync_on_rating_change').notNull().default(true),
+  syncQuotes: boolean('sync_quotes').notNull().default(false),
   privacySettingId: integer('privacy_setting_id').notNull().default(3),
   excludedLibraryIds: integer('excluded_library_ids')
     .array()
@@ -69,3 +71,34 @@ export type HardcoverUserSetting = typeof hardcoverUserSettings.$inferSelect;
 export type NewHardcoverUserSetting = typeof hardcoverUserSettings.$inferInsert;
 export type HardcoverBookState = typeof hardcoverBookState.$inferSelect;
 export type NewHardcoverBookState = typeof hardcoverBookState.$inferInsert;
+
+// Fork addition; the table is created by migrations/fork/40-hardcover-quotes.sql, not the Drizzle journal.
+export const hardcoverQuoteState = pgTable(
+  'hardcover_quote_state',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    bookId: integer('book_id')
+      .notNull()
+      .references(() => books.id, { onDelete: 'cascade' }),
+    annotationId: integer('annotation_id')
+      .notNull()
+      .references(() => annotations.id, { onDelete: 'cascade' }),
+    hardcoverReadingJournalId: integer('hardcover_reading_journal_id'),
+    // Mirrors annotations.version: the row is stale while this is null or behind it.
+    lastSyncedVersion: integer('last_synced_version'),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    syncError: text('sync_error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdateFn(() => new Date()),
+  },
+  (t) => [unique('hardcover_quote_state_annotation_uidx').on(t.annotationId), index('hardcover_quote_state_user_book_idx').on(t.userId, t.bookId)],
+);
+
+export type HardcoverQuoteState = typeof hardcoverQuoteState.$inferSelect;
+export type NewHardcoverQuoteState = typeof hardcoverQuoteState.$inferInsert;

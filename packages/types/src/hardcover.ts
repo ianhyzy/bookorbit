@@ -13,6 +13,7 @@ export interface HardcoverSettings {
   autoSyncOnStatusChange: boolean;
   autoSyncOnProgressUpdate: boolean;
   autoSyncOnRatingChange: boolean;
+  syncQuotes: boolean;
   privacySettingId: number;
   /** Books in these libraries never sync unless included one by one. */
   excludedLibraryIds: number[];
@@ -26,6 +27,7 @@ export interface UpsertHardcoverSettingsPayload {
   autoSyncOnStatusChange?: boolean;
   autoSyncOnProgressUpdate?: boolean;
   autoSyncOnRatingChange?: boolean;
+  syncQuotes?: boolean;
   privacySettingId?: number;
   excludedLibraryIds?: number[];
 }

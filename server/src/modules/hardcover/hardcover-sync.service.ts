@@ -11,7 +11,7 @@ import {
   type UpdateHardcoverBookSyncPayload,
 } from '@bookorbit/types';
 
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
 import { distinctUntilChanged, filter, map, merge, Observable, of, Subject } from 'rxjs';
 
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
@@ -19,6 +19,7 @@ import { BookService } from '../book/book.service';
 import { HARDCOVER_STATUS } from './hardcover.constants';
 import { HardcoverBookMatchService } from './hardcover-book-match.service';
 import { HardcoverClientService } from './hardcover-client.service';
+import { HardcoverQuoteSyncService } from './hardcover-quote-sync.service';
 import { buildHardcoverMatchBasis, parseHardcoverBookId } from './hardcover-id.utils';
 import {
   attemptOwnedReadId,
@@ -183,10 +184,15 @@ export class HardcoverSyncService {
     private readonly matchService: HardcoverBookMatchService,
     private readonly settingsService: HardcoverSettingsService,
     private readonly bookService: BookService,
+    // Optional so code that builds this service without the fork's quote sync keeps working.
+    @Optional() private readonly quoteSync?: HardcoverQuoteSyncService,
   ) {}
 
   async syncBook(userId: number, bookId: number): Promise<HardcoverSyncBookResult> {
-    return this.withBookSyncLock(userId, bookId, () => this.syncBookUnlocked(userId, bookId));
+    const result = await this.withBookSyncLock(userId, bookId, () => this.syncBookUnlocked(userId, bookId));
+    // In the background: highlights go up one request at a time and should not hold up "Sync now".
+    if (result !== 'failed') void this.quoteSync?.syncBookQuotes(userId, bookId);
+    return result;
   }
 
   private async syncBookUnlocked(userId: number, bookId: number): Promise<HardcoverSyncBookResult> {
@@ -463,6 +469,7 @@ export class HardcoverSyncService {
       if (result === 'synced') synced++;
       else if (result === 'skipped') skipped++;
       else failed++;
+      if (this.quoteSync && result !== 'failed') await this.quoteSync.syncBookQuotes(userId, book.bookId);
 
       this.emitProgress(userId, synced);
     }

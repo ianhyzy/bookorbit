@@ -23,6 +23,7 @@ const form = reactive({
   autoSyncOnStatusChange: true,
   autoSyncOnProgressUpdate: true,
   autoSyncOnRatingChange: true,
+  syncQuotes: false,
   privacySettingId: 3,
   excludedLibraryIds: [] as number[],
 })
@@ -35,6 +36,7 @@ onMounted(async () => {
     form.autoSyncOnStatusChange = settings.value.autoSyncOnStatusChange
     form.autoSyncOnProgressUpdate = settings.value.autoSyncOnProgressUpdate
     form.autoSyncOnRatingChange = settings.value.autoSyncOnRatingChange
+    form.syncQuotes = settings.value.syncQuotes
     form.privacySettingId = settings.value.privacySettingId
     form.excludedLibraryIds = [...(settings.value.excludedLibraryIds ?? [])]
   }
@@ -57,6 +59,7 @@ async function handleSave() {
     autoSyncOnStatusChange: form.autoSyncOnStatusChange,
     autoSyncOnProgressUpdate: form.autoSyncOnProgressUpdate,
     autoSyncOnRatingChange: form.autoSyncOnRatingChange,
+    syncQuotes: form.syncQuotes,
     privacySettingId: form.privacySettingId,
     excludedLibraryIds: form.excludedLibraryIds,
   })
@@ -226,6 +229,16 @@ function selectBookSyncMode(mode: 'all_eligible' | 'selected_only') {
           <p class="text-xs text-muted-foreground mt-0.5">{{ t('hardcover.connection.syncOnRating.description') }}</p>
         </div>
         <ToggleSwitch v-model="form.autoSyncOnRatingChange" :disabled="!form.enabled" />
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm">Sync highlights as quotes</p>
+          <p class="text-xs text-muted-foreground mt-0.5">
+            Push highlights to Hardcover as quotes on the linked book. Notes on a highlight stay in BookOrbit.
+          </p>
+        </div>
+        <ToggleSwitch v-model="form.syncQuotes" :disabled="!form.enabled" />
       </div>
 
       <div class="flex items-center justify-between">
