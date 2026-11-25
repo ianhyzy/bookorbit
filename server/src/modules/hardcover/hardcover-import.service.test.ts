@@ -495,11 +495,16 @@ describe('HardcoverImportService', () => {
     expect(result.failed).toBe(0);
     expect(result.conflicts).toBe(1);
     expect(mockUserBookStatusService.updateManual).toHaveBeenCalledTimes(1);
-    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(7, 42, {
-      status: 'read',
-      startedAt: new Date('2024-01-02T00:00:00.000Z'),
-      finishedAt: new Date('2024-01-11T00:00:00.000Z'),
-    });
+    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(
+      7,
+      42,
+      {
+        status: 'read',
+        startedAt: new Date('2024-01-02T00:00:00.000Z'),
+        finishedAt: new Date('2024-01-11T00:00:00.000Z'),
+      },
+      { startedOn: '2024-01-02', endedOn: '2024-01-11' },
+    );
     expect(mockRepo.upsertBookState).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 7,
@@ -806,11 +811,16 @@ describe('HardcoverImportService', () => {
 
     await makeService().applyImport(user as never);
 
-    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(7, 42, {
-      status: 'read',
-      startedAt: new Date('2024-01-02T12:34:56.000Z'),
-      finishedAt: new Date('2024-01-11T01:02:03.000Z'),
-    });
+    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(
+      7,
+      42,
+      {
+        status: 'read',
+        startedAt: new Date('2024-01-02T12:34:56.000Z'),
+        finishedAt: new Date('2024-01-11T01:02:03.000Z'),
+      },
+      { startedOn: '2024-01-02', endedOn: '2024-01-11' },
+    );
   });
 
   it('falls back to Hardcover user book dates when no read entry has progress or date signals', async () => {
@@ -859,11 +869,16 @@ describe('HardcoverImportService', () => {
 
     await makeService().applyImport(user as never);
 
-    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(7, 42, {
-      status: 'read',
-      startedAt: null,
-      finishedAt: null,
-    });
+    expect(mockUserBookStatusService.updateManual).toHaveBeenCalledWith(
+      7,
+      42,
+      {
+        status: 'read',
+        startedAt: null,
+        finishedAt: null,
+      },
+      { startedOn: null, endedOn: null },
+    );
   });
 
   it('applies selected needs_review rows', async () => {

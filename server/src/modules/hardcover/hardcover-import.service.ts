@@ -192,15 +192,25 @@ export class HardcoverImportService {
             // date. The imported reads above already hold the real dates either way.
             const clearsLifecycle = row.importedStatus === 'want_to_read';
             const isActiveStatus = row.importedStatus === 'reading' || row.importedStatus === 'on_hold';
-            await this.userBookStatusService.updateManual(user.id, row.localBookId, {
-              status: row.importedStatus,
-              ...(clearsLifecycle
-                ? {}
-                : {
-                    startedAt: toDate(row.importedStartedAt),
-                    finishedAt: isActiveStatus ? null : toDate(row.importedFinishedAt),
-                  }),
-            });
+            if (clearsLifecycle) {
+              await this.userBookStatusService.updateManual(user.id, row.localBookId, { status: row.importedStatus });
+            } else {
+              // Hardcover's dates are calendar days. Sent only as instants (midnight UTC), the status
+              // service reads them in the user's time zone, which is the day before anywhere west of UTC.
+              await this.userBookStatusService.updateManual(
+                user.id,
+                row.localBookId,
+                {
+                  status: row.importedStatus,
+                  startedAt: toDate(row.importedStartedAt),
+                  finishedAt: isActiveStatus ? null : toDate(row.importedFinishedAt),
+                },
+                {
+                  startedOn: toDateKey(row.importedStartedAt),
+                  endedOn: isActiveStatus ? null : toDateKey(row.importedFinishedAt),
+                },
+              );
+            }
 
             const progressImported = await this.applyProgressIfRequested(user.id, row, importProgress, startedAt);
 
@@ -659,6 +669,11 @@ function roundProgressPercent(value: number | null | undefined): number | null {
 
 function toFiniteNumber(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function toDateKey(value: string | null): string | null {
+  const key = value?.slice(0, 10);
+  return key && /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
 }
 
 function toDate(value: string | null): Date | null {
