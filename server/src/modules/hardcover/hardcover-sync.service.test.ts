@@ -1242,6 +1242,45 @@ describe('HardcoverSyncService', () => {
       expect(mockClient.query).not.toHaveBeenCalledWith(1, 'tok', expect.stringContaining('mutation InsertUserBookRead'), expect.anything());
     });
 
+    it("takes over Hardcover's own read on a first sync instead of filing a second one", async () => {
+      mockRepo.findBookSyncData.mockResolvedValue(readingBook);
+      mockRepo.findBookState.mockResolvedValue(undefined);
+      mockRepo.findReadingAttempts.mockResolvedValue([attempt(2, { startedOn: '2024-01-01' })]);
+      // Hardcover dated its read the day the book was added, not the day the reading began.
+      arrange([{ id: 777, started_at: '2026-11-25', finished_at: null, progress_pages: null }]);
+      updateRead(777);
+
+      await expect(makeService().syncBook(1, 1)).resolves.toBe('synced');
+
+      expect(linkCalls()).toEqual([[1, 2, 777]]);
+      expect(mockClient.query).not.toHaveBeenCalledWith(1, 'tok', expect.stringContaining('mutation InsertUserBookRead'), expect.anything());
+    });
+
+    it('takes over the read Hardcover files today when an already synced book is started', async () => {
+      mockRepo.findBookSyncData.mockResolvedValue(readingBook);
+      mockRepo.findBookState.mockResolvedValue({ hardcoverBookId: 10, hardcoverUserBookId: 55, hardcoverReadId: null });
+      mockRepo.findReadingAttempts.mockResolvedValue([attempt(2, { startedOn: '2024-01-01' })]);
+      arrange([{ id: 777, started_at: new Date().toISOString().slice(0, 10), finished_at: null, progress_pages: null }]);
+      updateRead(777);
+
+      await expect(makeService().syncBook(1, 1)).resolves.toBe('synced');
+
+      expect(linkCalls()).toEqual([[1, 2, 777]]);
+      expect(mockClient.query).not.toHaveBeenCalledWith(1, 'tok', expect.stringContaining('mutation InsertUserBookRead'), expect.anything());
+    });
+
+    it('still files a new read beside a differently dated one once the book has synced before', async () => {
+      mockRepo.findBookSyncData.mockResolvedValue(readingBook);
+      mockRepo.findBookState.mockResolvedValue({ hardcoverBookId: 10, hardcoverUserBookId: 55, hardcoverReadId: null });
+      mockRepo.findReadingAttempts.mockResolvedValue([attempt(2, { startedOn: '2024-01-01' })]);
+      arrange([{ id: 777, started_at: '2023-06-01', finished_at: null, progress_pages: null }]);
+      insertRead(601);
+
+      await expect(makeService().syncBook(1, 1)).resolves.toBe('synced');
+
+      expect(linkCalls()).toEqual([[1, 2, 601]]);
+    });
+
     it('claims a candidate locally before editing it on Hardcover', async () => {
       mockRepo.findBookSyncData.mockResolvedValue(readingBook);
       mockRepo.findBookState.mockResolvedValue(undefined);

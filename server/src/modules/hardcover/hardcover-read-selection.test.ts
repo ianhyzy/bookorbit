@@ -7,6 +7,7 @@ import {
   readTargetForBook,
   selectAdoptableReadId,
   selectPrimaryAttempt,
+  selectPlaceholderReadId,
 } from './hardcover-read-selection';
 
 function read(id: number, started_at: string | null, finished_at: string | null) {
@@ -224,5 +225,49 @@ describe('selectAdoptableReadId', () => {
     const reads = [read(700, '2024-01-01', '2024-01-05'), read(701, '2024-01-01', null)];
 
     expect(selectAdoptableReadId(reads, target, new Set())).toBe(700);
+  });
+});
+
+describe('selectPlaceholderReadId', () => {
+  const reading = { startedOn: '2024-01-01', endedOn: null, finished: false };
+  const finished = { startedOn: '2024-01-01', endedOn: '2024-01-05', finished: true };
+  const now = new Date('2026-11-25T18:00:00Z');
+  const first = { firstSync: true, now };
+  const later = { firstSync: false, now };
+
+  it('takes the read Hardcover files for a book added as reading, whatever day it carries', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: '2026-11-20', finished_at: null }], reading, new Set(), first)).toBe(7);
+  });
+
+  it('takes the finish-only read Hardcover files for a book added as read', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: null, finished_at: '2026-11-25' }], finished, new Set(), first)).toBe(7);
+  });
+
+  it('takes a read filed today on a book that was already on the shelf', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: null, finished_at: '2026-11-25' }], finished, new Set(), later)).toBe(7);
+    expect(selectPlaceholderReadId([{ id: 7, started_at: '2026-11-26', finished_at: null }], reading, new Set(), later)).toBe(7);
+  });
+
+  it('leaves an older read on an already synced book alone', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: '2026-11-20', finished_at: null }], reading, new Set(), later)).toBeNull();
+    expect(selectPlaceholderReadId([{ id: 7, started_at: null, finished_at: '2026-10-01' }], finished, new Set(), later)).toBeNull();
+  });
+
+  it('leaves a dated finished read alone: that is a record, not a placeholder', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: '2026-11-24', finished_at: '2026-11-25' }], finished, new Set(), first)).toBeNull();
+  });
+
+  it('never crosses open and finished', () => {
+    expect(selectPlaceholderReadId([{ id: 7, started_at: null, finished_at: '2026-11-25' }], reading, new Set(), first)).toBeNull();
+    expect(selectPlaceholderReadId([{ id: 7, started_at: '2026-11-25', finished_at: null }], finished, new Set(), first)).toBeNull();
+  });
+
+  it('does not guess between several reads, or take a claimed one', () => {
+    const two = [
+      { id: 7, started_at: '2026-11-25', finished_at: null },
+      { id: 8, started_at: '2026-11-25', finished_at: null },
+    ];
+    expect(selectPlaceholderReadId(two, reading, new Set(), first)).toBeNull();
+    expect(selectPlaceholderReadId(two.slice(0, 1), reading, new Set([7]), first)).toBeNull();
   });
 });
