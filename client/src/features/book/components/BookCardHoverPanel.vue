@@ -31,9 +31,16 @@ withDefaults(
     author: string | null
     showMenu: boolean
     menuLabel: string
+    /** Fork: keep the dock in place but out of sight (mouse hover); keyboard focus still reveals it. */
+    dockHidden?: boolean
+    /** Fork: lines the title may take before it clamps. */
+    titleLines?: 2 | 4
   }>(),
-  { linked: null },
+  { linked: null, dockHidden: false, titleLines: 2 },
 )
+
+/** Fork: the card opens the actions menu on right-click, so its open state is shared with the card. */
+const menuOpen = defineModel<boolean>('menuOpen', { default: false })
 
 const emit = defineEmits<{
   primary: [event: MouseEvent]
@@ -67,6 +74,7 @@ function handleAuthor(event: MouseEvent) {
         as="p"
         :text="title"
         :lines="2"
+        :style="{ '--card-title-lines': titleLines }"
         class="card-hover-panel__title min-w-0 text-[clamp(11px,6.4cqi,15px)] leading-[1.2] font-[650] tracking-[-0.005em] text-pretty text-cover-chip-foreground text-shadow-[0_1px_3px_rgb(0_0_0/0.5)]"
         data-testid="grid-card-hover-title"
       />
@@ -81,6 +89,11 @@ function handleAuthor(event: MouseEvent) {
 
     <div
       class="mt-[clamp(6px,4.5cqi,11px)] flex h-(--dock-h) items-stretch gap-0.5 rounded-full bg-black/50 p-0.5 ring-1 ring-white/16 ring-inset backdrop-blur-[10px] backdrop-saturate-140"
+      :class="
+        dockHidden
+          ? 'absolute inset-x-0 bottom-0 opacity-0 pointer-events-none has-[:focus-visible]:static has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto'
+          : ''
+      "
       data-testid="grid-card-dock"
     >
       <Tooltip>
@@ -136,7 +149,7 @@ function handleAuthor(event: MouseEvent) {
         <TooltipContent>{{ t('book.actions.quickView') }}</TooltipContent>
       </Tooltip>
 
-      <DropdownMenu v-if="showMenu">
+      <DropdownMenu v-if="showMenu" v-model:open="menuOpen">
         <DropdownMenuTrigger as-child>
           <button
             type="button"
@@ -194,6 +207,12 @@ function handleAuthor(event: MouseEvent) {
 .card-hover-dock__button {
   width: calc(var(--dock-h) - 4px);
   font-size: calc(var(--dock-h) * 0.46);
+}
+
+/* Fork: the title may take more lines than the label's default two. */
+.card-hover-panel :deep(.card-hover-panel__title > span) {
+  -webkit-line-clamp: var(--card-title-lines, 2);
+  line-clamp: var(--card-title-lines, 2);
 }
 
 /* Short covers (small squares) trade lines for room, by height rather than width. */

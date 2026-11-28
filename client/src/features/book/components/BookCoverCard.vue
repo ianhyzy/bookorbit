@@ -203,6 +203,7 @@ const coverFailed = ref(false)
 const coverImageRatio = ref<number | null>(null)
 const isMissing = computed(() => props.book.status === 'missing')
 const showMobileOverlay = ref(false)
+const menuOpen = ref(false)
 const root = ref<HTMLElement | null>(null)
 const coverSlotRatio = computed(() => coverAspectRatioValue(String(effectiveCoverAspectRatio.value)))
 const coverOverlayFrameStyle = computed(() => {
@@ -354,6 +355,13 @@ function handleContextMenu(event: MouseEvent) {
   const target = event.target
   if (target instanceof Element && target.closest('a[href]')) return
   event.preventDefault()
+  // Fork: the hover state shows only the title, so with a mouse right-click is how the actions menu opens.
+  // A held touch fires contextmenu on some browsers; that hold reveals the dock instead.
+  if (props.selectionMode || showBelowCoverLabelArea.value) return
+  if ('pointerType' in event && (event as PointerEvent).pointerType === 'touch') return
+  // Open once the button is up: a menu that appears under a pressed button takes the release as a click on an item.
+  if (event.buttons === 0) menuOpen.value = true
+  else window.addEventListener('pointerup', () => (menuOpen.value = true), { once: true })
 }
 
 function handleClickOutside(event: MouseEvent) {
@@ -399,6 +407,8 @@ const overlayVisibilityClass = computed(() =>
 const panelRevealClass = computed(() =>
   showMobileOverlay.value ? '' : 'translate-y-1.5 group-hover:translate-y-0 group-focus-within:translate-y-0 motion-reduce:translate-y-0',
 )
+// Fork: with the dock out of sight on hover the title has room for more lines; square covers stay shorter.
+const hoverTitleLines = computed(() => (effectiveCoverAspectRatio.value === '1/1' ? 2 : 4))
 const showBelowCoverLabelArea = computed(() => props.showLabel && cardInfoMode.value === 'below-cover')
 
 const { downloadFile, exportBooks } = useBookDownload()
@@ -693,6 +703,9 @@ const secondaryLabelLocation = computed(() => (props.selectionMode ? null : reso
               :author="authorLine"
               :show-menu="!showBelowCoverLabelArea"
               :menu-label="menuLabel"
+              :dock-hidden="!showMobileOverlay"
+              :title-lines="hoverTitleLines"
+              v-model:menu-open="menuOpen"
               @primary="handleDockPrimary"
               @quick-view="openQuickView"
               @author="openAuthorBrowse"
