@@ -8,6 +8,8 @@ import { HardcoverAutoSyncSchedulerService } from './hardcover-auto-sync-schedul
 import { HardcoverBookMatchService } from './hardcover-book-match.service';
 import { HardcoverClientService } from './hardcover-client.service';
 import { HardcoverController } from './hardcover.controller';
+import { HardcoverQuoteRepository } from './hardcover-quote.repository';
+import { HardcoverQuoteSyncService } from './hardcover-quote-sync.service';
 import { HardcoverEventListener } from './hardcover-event-listener.service';
 import { HardcoverImportService } from './hardcover-import.service';
 import { HardcoverQueueService } from './hardcover-queue.service';
@@ -24,6 +26,8 @@ import { HardcoverSyncService } from './hardcover-sync.service';
     HardcoverRepository,
     HardcoverSettingsService,
     HardcoverBookMatchService,
+    HardcoverQuoteRepository,
+    HardcoverQuoteSyncService,
     HardcoverSyncService,
     HardcoverImportService,
     HardcoverAutoSyncSchedulerService,
