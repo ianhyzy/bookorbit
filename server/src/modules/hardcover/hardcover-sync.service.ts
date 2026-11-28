@@ -29,6 +29,7 @@ import {
   readTargetForBook,
   type ReadingAttemptForSync,
   selectAdoptableReadId,
+  selectPlaceholderReadId,
   selectPrimaryAttempt,
 } from './hardcover-read-selection';
 import { type BookSyncData, HardcoverRepository } from './hardcover.repository';
@@ -603,6 +604,8 @@ export class HardcoverSyncService {
           target: readTargetForBook(startDate, endDate),
           reads,
           reserved,
+          // No user-book id on record means BookOrbit has not put this book on Hardcover before.
+          firstSync: match.replacedHardcoverBookId != null || syncState?.hardcoverUserBookId == null,
           startedAt: startDate,
           finishedAt: endDate,
           progressPages,
@@ -782,6 +785,8 @@ export class HardcoverSyncService {
       target: HardcoverReadTarget;
       reads: readonly HardcoverReadCandidate[];
       reserved: Set<number>;
+      /** Set for the primary read only: whether BookOrbit is putting this book on Hardcover for the first time. */
+      firstSync?: boolean;
       startedAt?: string | null;
       finishedAt?: string | null;
       progressPages?: number;
@@ -832,6 +837,14 @@ export class HardcoverSyncService {
       }
       input.reserved.add(candidate);
       return await write(candidate);
+    }
+
+    if (input.firstSync !== undefined) {
+      const placeholder = selectPlaceholderReadId(input.reads, input.target, excluded, { firstSync: input.firstSync, now: new Date() });
+      if (placeholder != null && (!attempt || (await this.repo.linkReadingAttempt(userId, attempt.id, placeholder)) !== 'conflict')) {
+        input.reserved.add(placeholder);
+        return await write(placeholder);
+      }
     }
 
     const created = await write(null);

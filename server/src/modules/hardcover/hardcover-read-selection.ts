@@ -122,3 +122,33 @@ export function selectAdoptableReadId(
   }
   return best?.id ?? null;
 }
+
+const PLACEHOLDER_WINDOW_MS = 36 * 60 * 60 * 1000;
+
+/**
+ * Hardcover files a read of its own whenever a book becomes reading or read there, whether the book
+ * is being added or was already on the shelf: `started_at` alone for a book being read,
+ * `finished_at` alone for a finished one, dated that day. That read stands for the reading being
+ * sent, but its date is the sync day rather than the real one, so date matching rejects it and a
+ * second read is filed beside it.
+ *
+ * Returns that read when it is the only unclaimed one, its open/finished state agrees with the
+ * target, and it is either dated around `now` or sits on a book BookOrbit is syncing for the first
+ * time. A finished read that also has a start date is somebody's dated record, never a placeholder.
+ */
+export function selectPlaceholderReadId(
+  reads: readonly HardcoverReadCandidate[],
+  target: HardcoverReadTarget,
+  unavailable: ReadonlySet<number>,
+  options: { firstSync: boolean; now: Date },
+): number | null {
+  const free = reads.filter((read) => !unavailable.has(read.id));
+  if (free.length !== 1) return null;
+  const [read] = free;
+  if (Boolean(read.finished_at) !== target.finished) return null;
+  if (read.finished_at && read.started_at) return null;
+  if (options.firstSync) return read.id;
+  const filedOn = Date.parse(read.finished_at ?? read.started_at ?? '');
+  if (Number.isNaN(filedOn) || Math.abs(options.now.getTime() - filedOn) > PLACEHOLDER_WINDOW_MS) return null;
+  return read.id;
+}
